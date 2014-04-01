@@ -1,0 +1,9 @@
+-> When theater is clicked, submit xml request to my server to find last weeks results
+-> Search field??
+-> style table
+-> have a spinner indicating waiting
+
+-> create theater collection class
+  -> theater class
+  -> geometry class
+  -> properties class

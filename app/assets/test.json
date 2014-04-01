@@ -1,0 +1,18 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "rentrak_id": "9183",
+        "name": "Palm Theatre",
+        "address": "817 Palm St, San Luis Obispo, CA"
+      },
+      "geometry": {
+        "id": 0,
+        "type": "Point",
+        "coordinates": [-120.6638196, 35.2815558]
+      }
+    }
+  ]
+}
