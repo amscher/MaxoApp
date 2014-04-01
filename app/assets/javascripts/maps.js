@@ -49,7 +49,9 @@ function initialize() {
     var theaterId = event.feature.getProperty('rentrak_id');
     var latlng = event.feature.getGeometry().get();
     map.panTo(latlng);
-    map.setZoom(11);
+    if (map.getZoom() < 11) {
+      map.setZoom(11);
+    }
 
     var xhr = new XMLHttpRequest();
     xhr.open('GET', '/map/theater_info/' + theaterId, true);
