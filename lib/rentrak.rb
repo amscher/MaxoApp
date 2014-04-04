@@ -15,6 +15,8 @@ class RentrakInfoGetter
     @cookie = ""
     @key = "AIzaSyCUFdO_BtmNQg0YRsE5PEYobe8JE8OTkIM"
 
+    @currentWeekHeaders = Array.new
+
     @headers =
     "Host: boxoffice.rentrak.com\n" +
     "Connection: keep-alive\n" +
@@ -128,24 +130,73 @@ class RentrakInfoGetter
     s.close
   end
 
+  def parseTableHeader(table)
+    headers = Array.new
+    # Get headers for table
+    if headers.empty?
+      headerEl = table.match(/<tr class="">.+?<\/tr>/m)[0]
+      headerEl.scan(/>([^"]+)<\/a/) do |match|
+        match = match[0].gsub(/<br \/>/, ' ')
+        if (match == "%")
+          # headers[headers.length - 1] += " (%)"
+          match = "%#{headers[headers.length - 1]}"
+        end
+        headers.push(match)
+      end
+    end
+    return headers
+  end
+
+  # Creates an array of objects based on the table. The header values
+  # correspond to keys in the table, the rows correspond to objects,
+  # the columns correspond to the objects value that corresponds to the
+  # header key.
+  def parseTable(table, headers)
+    addNext = false
+    objects = Array.new
+    table.scan(/<tr class="body.+?<\/tr>/m) do |row|
+      object = Hash.new
+      index = 0
+      row.scan(/>([^<]+)<\//) do |d|
+        object[headers[index]] = d[0]
+        # object[headers[index]] = addNext ? object[headers[index]] += " (#{d[0]})" : d[0]
+        # puts "#{headers[index]}: #{object[headers[index]]}"
+        # addNext = headers[index].index(/(%)/) != nil && !addNext ? true : false
+        # index = addNext ? index : index + 1
+        index += 1
+      end
+      objects.push(object)
+    end
+    return objects
+  end
+
   def doBoxOfficeRequest(id)
     url = "http://boxoffice.rentrak.com/theatrical/theaters/menu_theater_detail.html?theater_no=#{id}"
     uri = URI.parse(url)
     http = Net::HTTP.new(uri.host, uri.port)
-    # http.use_ssl = true
     req = Net::HTTP::Get.new(uri.request_uri)
     req["Cookie"] = "_referrer_og=https%3A%2F%2Fwww.google.com%2F; _jsuid=1616249673; __utma=227188638.385097425.1396122786.1396122786.1396122787.2; __utmc=227188638; __utmz=227188638.1396122787.2.2.utmcsr=www.rentrak.com|utmccn=(not%20set)|utmcmd=(not%20set); __utma=183032501.538269636.1396121871.1396364604.1396366417.9; __utmb=183032501.13.10.1396366417; __utmc=183032501; __utmz=183032501.1396121871.1.1.utmcsr=(direct)|utmccn=(direct)|utmcmd=(none); #{@cookie}"
 
     res = http.request(req)
     table = res.body.match(/<table id="dataTable".+?<\/table>/m)
-    return table
+    movies = [];
+    if (table != nil)
+      if @currentWeekHeaders.empty?
+        @currentWeekHeaders = parseTableHeader(table[0])
+      end
+      movies = parseTable(table[0], @currentWeekHeaders)
+    end
+
+    packet = {"headers" => @currentWeekHeaders, "movies"=> movies}
+    puts packet
+    return packet
   end
 end
 
 infoGetter = RentrakInfoGetter.new
 puts infoGetter.doLoginRequest
-puts infoGetter.doBoxOfficeRequest(991355)
-  # doTheaterInfoRequest
+infoGetter.doBoxOfficeRequest(991355)
+# doTheaterInfoRequest
 
 
 

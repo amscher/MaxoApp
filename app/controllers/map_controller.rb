@@ -14,7 +14,8 @@ class MapController < ApplicationController
       @infoGetter = RentrakInfoGetter.new
       @infoGetter.doLoginRequest
     end
-    # infoGetter.doBoxOfficeRequest(params[:id])
-    render text: @infoGetter.doBoxOfficeRequest(params[:id])
+    hash = @infoGetter.doBoxOfficeRequest(params[:id])
+    puts hash.to_json
+    render json: hash
   end
 end

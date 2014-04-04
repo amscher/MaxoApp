@@ -1,8 +1,11 @@
+var SELECTED_ZOOM_LEVEL = 13;
+
 var map;
 var spinner;
 var mapContainerEl;
 var infoContainerEl;
 var labels = [];
+var compareTheaters = [];
 var selectedTheater;
 var circleL;
 var circleM;
@@ -11,6 +14,8 @@ var circleS;
 
 G_ICON = "http://mt.google.com/vt/icon?psize=30&font=fonts/arialuni_t.ttf&color=ff304C13&name=icons/spotlight/spotlight-waypoint-a.png&ax=43&ay=48&text=%E2%80%A2";
 R_ICON = "https://mts.googleapis.com/vt/icon/name=icons/spotlight/spotlight-poi.png&scale=1";
+B_ICON = "https://mt.google.com/vt/icon?psize=20&font=fonts/Roboto-Regular.ttf&color=ff330000&name=icons/spotlight/spotlight-waypoint-blue.png&ax=44&ay=48&scale=1&text=%E2%80%A2";
+
 
 function initialize() {
   var opts = {
@@ -71,89 +76,170 @@ function initialize() {
 
   // Set mouseover event for each feature.
   map.data.addListener('click', theaterSelectionHandler);
+  map.data.addListener('mouseover', theaterHoverHandler);
 }
 
+function theaterHoverHandler(event) {
 
-function theaterSelectionHandler(event) {
-  if (selectedTheater != null) map.data.overrideStyle(selectedTheater, {icon: R_ICON});
+}
 
-  // RESET EVERYTHING
-  selectedTheater = event.feature;
-  map.data.overrideStyle(selectedTheater, {icon: G_ICON});
-  var theaterId = selectedTheater.getProperty('rentrak_id');
-  var latlng = selectedTheater.getGeometry().get();
-  var theaterName = selectedTheater.getProperty('name');
+function resetSelectedTheater() {
+  map.data.overrideStyle(selectedTheater, {icon: R_ICON});
   // Delete old labels
   for (var label in labels) {
     labels[label].setMap(null);
   }
   labels = [];
-
-
-  map.panTo(latlng);
-  if (map.getZoom() < 11) {
-    map.setZoom(11);
+  selectedTheater = null;
+  circleL.setMap(null);
+  circleS.setMap(null);
+  circleM.setMap(null);
+  for (var t in compareTheaters) {
+    map.data.overrideStyle(compareTheaters[t], {icon: R_ICON});
   }
-  // Retrieve box office information
-  getTheaterInfo(theaterId, latlng, theaterName);
-
-  // Start loader
-  spinner.spin(mapContainerEl);
-
-  // Attach circle to marker
-  circleL.bindTo('center', selectedTheater.getGeometry(), 'position');
-  circleM.bindTo('center', selectedTheater.getGeometry(), 'position');
-  circleS.bindTo('center', selectedTheater.getGeometry(), 'position');
-  var bounds = circleL.getBounds();
-
-  // Find all theaters nearby
-  map.data.forEach(function(feature){
-    labelDistancesNearby(feature, latlng, bounds);
-  });
+  compareTheaters = [];
 }
 
-function labelDistancesNearby(feature, latlng, bounds) {
+/**
+ *
+ */
+function theaterSelectionHandler(event) {
+  // Start loader
+  spinner.spin(mapContainerEl);
+  if (selectedTheater != null) {
+    compareTheaters.push(event.feature);
+    map.data.overrideStyle(event.feature, {icon: B_ICON});
+    displayTheaterInfo(event.feature, true /* A comparison theater */);
+    return;
+  }
+  // Update map to center on selected theater
+  selectedTheater = event.feature;
+  map.data.overrideStyle(selectedTheater, {icon: G_ICON});
+  var latlng = selectedTheater.getGeometry().get();
+  map.panTo(latlng);
+
+  if (map.getZoom() < SELECTED_ZOOM_LEVEL) {
+    map.setZoom(SELECTED_ZOOM_LEVEL);
+  }
+
+  // Attach circle to marker
+  circleL.setCenter(latlng)
+  circleL.setMap(map);
+  circleM.setCenter(latlng)
+  circleM.setMap(map);
+  circleS.setCenter(latlng)
+  circleS.setMap(map);
+  // circleL.bindTo('center', selectedTheater.getGeometry(), 'position');
+  // circleM.bindTo('center', selectedTheater.getGeometry(), 'position');
+  // circleS.bindTo('center', selectedTheater.getGeometry(), 'position');
+  var bounds = circleL.getBounds();
+
+  map.data.forEach(function(feature){
+    labelNearbyTheater(feature, latlng, bounds);
+  });
+
+  // Retrieve and display box office information
+  displayTheaterInfo(selectedTheater, false /* select as central theater */);
+}
+
+function labelNearbyTheater(feature, latlng, bounds) {
   nearLatLng = feature.getGeometry().get();
   if (nearLatLng != latlng && bounds.contains(nearLatLng)) {
-    // Get distance, display label
+    // Get distance from selected theater, and display label.
     var distance =
         google.maps.geometry.spherical.computeDistanceBetween(nearLatLng, latlng);
     distance = (distance * 0.000621371).toFixed(2);
 
+    // Create marker to hold distance info
     var marker = new MarkerWithLabel({
        position: nearLatLng,
        map: map,
        labelContent: feature.getProperty("name") + " (" + distance + "mi)",
-       labelAnchor: new google.maps.Point(45, 0),
+       labelAnchor: new google.maps.Point(0, 0),
        labelClass: "distance-labels", // the CSS class for the label
        icon: {}
      });
-
     labels.push(marker);
   }
 }
 
-function getTheaterInfo(theaterId, latlng, theaterName) {
-    var xhr = new XMLHttpRequest();
-    xhr.open('GET', '/map/theater_info/' + theaterId, true);
-    xhr.onreadystatechange = function() {
-      if (this.readyState != 4) {
-          return;
-      }
-      if (this.status == 200) {
-        spinner.stop();
-        mapContainerEl.style.height = "75%";
-        infoContainerEl.style.height = "25%";
-        google.maps.event.trigger(map, 'resize');
-        infoContainerEl.style.visibility = 'visible';
-        infoContainerEl.innerHTML = "<h3>" + theaterName + "</h3> <div class=\"theater-data-table\">" + this.responseText + "</div>";
+/**
+ * Retrieves info for given theater from rentrak database.
+ */
+function displayTheaterInfo(selectedTheater, compare) {
+  var results = selectedTheater.getProperty("currentWeek");
+  if (results != null) {
+    addDataToMap(selectedTheater, results, compare);
+    return;
+  }
+  var theaterId = selectedTheater.getProperty('rentrak_id');
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', '/map/theater_info/' + theaterId, true);
+  xhr.onreadystatechange = function() {
+    if (this.readyState != 4) {
         return;
-      } else {
-        // Handle error
-      }
-    };
-    xhr.send();
+    }
+    if (this.status == 200) {
+      var results = JSON.parse(this.responseText);
+      selectedTheater.setProperty("currentWeek", results);
+      addDataToMap(selectedTheater, results, compare);
+      return;
+    } else {
+      // Handle error
+    }
+  };
+  xhr.send();
 }
+
+var REMOVE_BUTTON = "remove-compare-button-container"
+
+function addDataToMap(theater, results, isCompare) {
+  if (isCompare && $(infoContainerEl).children().length > 4) {
+    // TODO:: trigger click on last 2nd remove button
+    return;
+  }
+
+  var theaterId = theater.getProperty('rentrak_id');
+  var theaterName = theater.getProperty('name');
+  var latlng = theater.getGeometry().get();
+
+  var titleEl = $("<h3>").text(theaterName);
+  var tableEl = createTable(results);
+
+  // Create Remove Button.
+  var removeEl = $("<div>").addClass(REMOVE_BUTTON).text("remove");
+  var containerEl = $("<div>").
+      addClass("theater-info-content").
+      append(titleEl).
+      append(tableEl).
+      append(removeEl);
+
+  // Add event handler.
+  removeEl.on('click', function(event) {
+    // Unselect theater
+    map.data.overrideStyle(theater, {icon: R_ICON});
+    if (!isCompare) resetSelectedTheater();
+    // Remove container from infoContainer
+    if (isCompare) {
+      containerEl.remove();
+    } else {
+      $(infoContainerEl).empty();
+    }
+  });
+
+  if (!isCompare) {
+    mapContainerEl.style.width = "65%";
+    infoContainerEl.style.width = "34.5%";
+    infoContainerEl.style.visibility = 'visible';
+    google.maps.event.trigger(map, 'resize');
+    map.panTo(latlng);
+  }
+
+  if (isCompare) $(infoContainerEl).append(containerEl);
+  else $(infoContainerEl).html(containerEl);
+  spinner.stop();
+}
+
 
 google.maps.event.addDomListener(window, 'load', initialize);
 
