@@ -138,7 +138,6 @@ class RentrakInfoGetter
       headerEl.scan(/>([^"]+)<\/a/) do |match|
         match = match[0].gsub(/<br \/>/, ' ')
         if (match == "%")
-          # headers[headers.length - 1] += " (%)"
           match = "%#{headers[headers.length - 1]}"
         end
         headers.push(match)
@@ -159,10 +158,6 @@ class RentrakInfoGetter
       index = 0
       row.scan(/>([^<]+)<\//) do |d|
         object[headers[index]] = d[0]
-        # object[headers[index]] = addNext ? object[headers[index]] += " (#{d[0]})" : d[0]
-        # puts "#{headers[index]}: #{object[headers[index]]}"
-        # addNext = headers[index].index(/(%)/) != nil && !addNext ? true : false
-        # index = addNext ? index : index + 1
         index += 1
       end
       objects.push(object)
@@ -188,7 +183,6 @@ class RentrakInfoGetter
     end
 
     packet = {"headers" => @currentWeekHeaders, "movies"=> movies}
-    puts packet
     return packet
   end
 end

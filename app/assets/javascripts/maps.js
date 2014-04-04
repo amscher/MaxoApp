@@ -122,16 +122,14 @@ function theaterSelectionHandler(event) {
     map.setZoom(SELECTED_ZOOM_LEVEL);
   }
 
-  // Attach circle to marker
+  // Attach circles to map
   circleL.setCenter(latlng)
   circleL.setMap(map);
   circleM.setCenter(latlng)
   circleM.setMap(map);
   circleS.setCenter(latlng)
   circleS.setMap(map);
-  // circleL.bindTo('center', selectedTheater.getGeometry(), 'position');
-  // circleM.bindTo('center', selectedTheater.getGeometry(), 'position');
-  // circleS.bindTo('center', selectedTheater.getGeometry(), 'position');
+
   var bounds = circleL.getBounds();
 
   map.data.forEach(function(feature){
