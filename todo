@@ -14,3 +14,5 @@
 -> Drop down to choose week.
 -> Highlight chosen theater -> show distances to surrounding pins...
   -> Get population data for latlng
+
+Change so that set-property triggers selection handler

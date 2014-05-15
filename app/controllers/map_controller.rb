@@ -18,4 +18,17 @@ class MapController < ApplicationController
     puts hash.to_json
     render json: hash
   end
+
+  def population_info
+    url = "http://data.fcc.gov/api/block/find?latitude=#{params[:latitude]}&longitude=#{params[:longitude]}&format=json";
+    puts url
+
+    uri = URI.parse(url)
+    http = Net::HTTP.new(uri.host, uri.port)
+    req = Net::HTTP::Get.new(uri.request_uri)
+
+    res = http.request(req)
+    puts res.body
+    render json: res.body
+  end
 end

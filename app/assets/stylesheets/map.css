@@ -75,7 +75,6 @@ span {
   overflow: scroll;
 }
 
-
 #theater-info-container {
   overflow: scroll;
   position: relative;
@@ -87,6 +86,7 @@ span {
   visibility: hidden;
 }
 
+.compare-button,
 .remove-compare-button-container {
   width: 60px;
   text-align: center;
@@ -98,3 +98,20 @@ span {
   color: white;
   margin: 8px;
 }
+
+.compare-button {
+  font-size: larger;
+  background-color: #4da6ff;
+  border-color: #0073e6;
+  color: black;
+}
+
+#population-info-container {
+  position: absolute;
+  width: 200px;
+  height: 200px;
+  visibility: hidden;
+  background-color: white;
+  border: 2px solid #ccc;
+}
+

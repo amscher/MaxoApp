@@ -10,6 +10,8 @@ var selectedTheater;
 var circleL;
 var circleM;
 var circleS;
+var compareMarker;
+var selectMarker;
 
 
 G_ICON = "http://mt.google.com/vt/icon?psize=30&font=fonts/arialuni_t.ttf&color=ff304C13&name=icons/spotlight/spotlight-waypoint-a.png&ax=43&ay=48&text=%E2%80%A2";
@@ -47,17 +49,6 @@ function initialize() {
   mapContainerEl = document.getElementById('map-canvas');
   map = new google.maps.Map(mapContainerEl, mapOptions);
 
-  var createCircle = function(radius) {
-    return new google.maps.Circle({
-      map: map,
-      clickable: false,
-      radius: radius, // metres
-      strokeColor: '#313131',
-      fillOpacity: 0,
-      strokeOpacity: .8,
-      strokeWeight: .8
-    });
-  };
 
   // Define distance cirlcs from selected theater.
   circleL = createCircle(16093.4);
@@ -79,8 +70,55 @@ function initialize() {
   map.data.addListener('mouseover', theaterHoverHandler);
 }
 
-function theaterHoverHandler(event) {
+var createCircle = function(radius) {
+  return new google.maps.Circle({
+    map: map,
+    clickable: false,
+    radius: radius, // metres
+    strokeColor: '#313131',
+    fillOpacity: 0,
+    strokeOpacity: .8,
+    strokeWeight: .8
+  });
+};
 
+function setCompareButton(mainEvent, feature) {
+  var latlng = feature.getGeometry().get();
+  var anchor = new google.maps.Point(50, 50);
+  compareMarker = new MarkerWithLabel({
+    position: new google.maps.LatLng(latlng.lat() + .005, latlng.lng() + 0.002, false),
+    map: map,
+    clickable: true,
+    icon: "https://cdn1.iconfinder.com/data/icons/windows-8-metro-style/26/compare.png"
+  });
+
+  compareMarker.addListener("click", function(event) {
+    theaterCompareHandler(mainEvent);
+  });
+}
+
+function theaterHoverHandler(event) {
+  if (selectedTheater == null) return;
+  if (map.getZoom() < SELECTED_ZOOM_LEVEL) return;
+  if (selectedTheater == event.feature) return;
+
+  // Bind two new markers to features (select & compare)
+  var latlng = event.feature.getGeometry().get();
+  setCompareButton(event, event.feature);
+
+  var radius = 1 << (23 - map.getZoom()); // Have to account for geometric scaling of zoom.
+  var vicinity =  new google.maps.Circle({
+    map: map,
+    clickable: true,
+    radius: radius, // metres
+    fillOpacity: 0,
+    strokeOpacity: 0
+  });
+  vicinity.setCenter(latlng)
+  vicinity.addListener("mouseout", function(event) {
+    compareMarker.setMap(null);
+    vicinity.setMap(null);
+  });
 }
 
 function resetSelectedTheater() {
@@ -100,18 +138,22 @@ function resetSelectedTheater() {
   compareTheaters = [];
 }
 
+function theaterCompareHandler(event) {
+  // Start loader
+  spinner.spin(mapContainerEl);
+  compareTheaters.push(event.feature);
+  map.data.overrideStyle(event.feature, {icon: B_ICON});
+  displayTheaterInfo(event.feature, true /* A comparison theater */);
+}
+
 /**
  *
  */
 function theaterSelectionHandler(event) {
+  resetSelectedTheater();
+
   // Start loader
   spinner.spin(mapContainerEl);
-  if (selectedTheater != null) {
-    compareTheaters.push(event.feature);
-    map.data.overrideStyle(event.feature, {icon: B_ICON});
-    displayTheaterInfo(event.feature, true /* A comparison theater */);
-    return;
-  }
   // Update map to center on selected theater
   selectedTheater = event.feature;
   map.data.overrideStyle(selectedTheater, {icon: G_ICON});
@@ -123,11 +165,11 @@ function theaterSelectionHandler(event) {
   }
 
   // Attach circles to map
-  circleL.setCenter(latlng)
+  circleL.setCenter(latlng);
   circleL.setMap(map);
-  circleM.setCenter(latlng)
+  circleM.setCenter(latlng);
   circleM.setMap(map);
-  circleS.setCenter(latlng)
+  circleS.setCenter(latlng);
   circleS.setMap(map);
 
   var bounds = circleL.getBounds();
@@ -136,10 +178,29 @@ function theaterSelectionHandler(event) {
     labelNearbyTheater(feature, latlng, bounds);
   });
 
+  // Retrieve and display population data
+  displayPopulationData();
+
   // Retrieve and display box office information
   displayTheaterInfo(selectedTheater, false /* select as central theater */);
 }
 
+function handler(data) {
+    var containerEl = $("#population-info-container");
+    containerEl.show();
+    containerEl.html(data);
+};
+
+function displayPopulationData() {
+  var latlng = selectedTheater.getGeometry().get();
+  var c = new Census();
+  c.getData(latlng.lat(), latlng.lng(), 1, "handler");
+
+}
+
+/**
+ *
+ */
 function labelNearbyTheater(feature, latlng, bounds) {
   nearLatLng = feature.getGeometry().get();
   if (nearLatLng != latlng && bounds.contains(nearLatLng)) {
@@ -155,7 +216,7 @@ function labelNearbyTheater(feature, latlng, bounds) {
        labelContent: feature.getProperty("name") + " (" + distance + "mi)",
        labelAnchor: new google.maps.Point(0, 0),
        labelClass: "distance-labels", // the CSS class for the label
-       icon: {}
+       icon: null
      });
     labels.push(marker);
   }
