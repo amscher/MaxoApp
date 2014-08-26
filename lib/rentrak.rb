@@ -13,7 +13,7 @@ class RentrakInfoGetter
 
     @token = ""
     @cookie = ""
-    @key = "AIzaSyCUFdO_BtmNQg0YRsE5PEYobe8JE8OTkIM"
+    @apiKey = "AIzaSyBsF2yXlAwpRhJktLB2gseze9ZSm-T-wOA"
 
     @currentWeekHeaders = Array.new
 
@@ -99,7 +99,7 @@ class RentrakInfoGetter
               puts "|    #{theaterNumber}#{' '*numberPadding}|    #{name}#{' '*namePadding.abs}| #{address}#{' '*addressPadding.abs}|"
 
               addressGoog = address.gsub(/\s+/, '+')
-              url = "https://maps.googleapis.com/maps/api/geocode/json?address=#{addressGoog}&key=#{@key}&sensor=false"
+              url = "https://maps.googleapis.com/maps/api/geocode/json?address=#{addressGoog}&key=#{@apiKey}&sensor=false"
               puts url
 
               uri = URI.parse(url)
