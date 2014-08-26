@@ -13,7 +13,7 @@ class RentrakInfoGetter
 
     @token = ""
     @cookie = ""
-    @apiKey = "AIzaSyBsF2yXlAwpRhJktLB2gseze9ZSm-T-wOA"
+    @apiKey = "AIzaSyDl1bdlwG9ssPAkn0n78rx4ECvfwlW3MK4"
 
     @currentWeekHeaders = Array.new
 
@@ -53,7 +53,7 @@ class RentrakInfoGetter
 
   def doTheaterInfoRequest
     s = TCPSocket.open @host, @port
-    s.puts "GET /theatrical/theaters/theater_lookup.html?dma_no=ALL&exact_theater_match=1&week_range=&week_range=&week_range=&reporting_status=&coc_id=ALL&branch=ALL&open_status=Y&search_keywords=&no_paging=1 HTTP/1.1\r\n"
+    s.puts "GET /theatrical/theaters/theater_lookup.html?exact_theater_match=0&search_keywords=CA&no_paging=1&branch=ALL&coc_id=ALL&dma_no=ALL&open_status=Y&reporting_status=&week_range=&week_range=&week_range= HTTP/1.1\r\n"
     s.puts @headers
     s.puts "Cookie: _referrer_og=https%3A%2F%2Fwww.google.com%2F; _jsuid=1616249673; __utma=227188638.385097425.1396122786.1396122786.1396122787.2; __utmc=227188638; __utmz=227188638.1396122787.2.2.utmcsr=www.rentrak.com|utmccn=(not%20set)|utmcmd=(not%20set); #{@cookie}; __utma=183032501.538269636.1396121871.1396193288.1396204321.5; __utmb=183032501.4.10.1396204321; __utmc=183032501; __utmz=183032501.1396121871.1.1.utmcsr=(direct)|utmccn=(direct)|utmcmd=(none)"
     s.puts "\r\n"
@@ -100,7 +100,6 @@ class RentrakInfoGetter
 
               addressGoog = address.gsub(/\s+/, '+')
               url = "https://maps.googleapis.com/maps/api/geocode/json?address=#{addressGoog}&key=#{@apiKey}&sensor=false"
-              puts url
 
               uri = URI.parse(url)
               http = Net::HTTP.new(uri.host, uri.port)
@@ -110,7 +109,6 @@ class RentrakInfoGetter
               res = http.request(req)
               data = JSON.parse(res.body)
               location = data["results"][0]["geometry"]["location"]
-              puts location
 
               lat = location["lat"]
               long = location["lng"]
@@ -189,8 +187,8 @@ end
 
 infoGetter = RentrakInfoGetter.new
 puts infoGetter.doLoginRequest
-infoGetter.doBoxOfficeRequest(991355)
-# doTheaterInfoRequest
+infoGetter.doTheaterInfoRequest
+# infoGetter.doBoxOfficeRequest(991355)
 
 
 
